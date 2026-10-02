@@ -321,7 +321,7 @@ the tool never attempts to create a CE column — it tells you what to create.
 node fixtures/test.mjs          # enum matching, ValueMap shape, CSV
 node fixtures/fields.test.mjs   # type recommendations, comparison buckets, exports
 node fixtures/edm.test.mjs      # $metadata parsing, run against the shipped source
-node fixtures/panel.smoke.mjs   # full UI drive-through in jsdom (needs: npm i jsdom)
+node fixtures/panel.smoke.mjs   # full UI drive-through in jsdom (run `npm install` first)
 ```
 
 
@@ -373,6 +373,8 @@ to refresh the connector's cached entity list, or type the collection name as a 
 
 `node fixtures/names.test.mjs` covers the matcher and runs the content-script job against a fake F&O server
 (filter miss → case-insensitive hit, misspelling → fuzzy, non-public entity, live check URL shape).
+
+Run every suite at once with `npm install` (one-time, pulls in jsdom) then `npm test`.
 
 ## License
 

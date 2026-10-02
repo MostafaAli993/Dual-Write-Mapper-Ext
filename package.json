@@ -1,0 +1,13 @@
+{
+  "name": "dual-write-mapper-ext",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Dev tooling for the Dual-write Mapper Chrome extension (tests only; the extension itself has no dependencies).",
+  "license": "MIT",
+  "scripts": {
+    "test": "node fixtures/test.mjs && node fixtures/fields.test.mjs && node fixtures/edm.test.mjs && node fixtures/names.test.mjs && node fixtures/panel.smoke.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

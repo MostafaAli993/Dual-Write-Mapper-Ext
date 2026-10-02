@@ -4,9 +4,10 @@
 import { JSDOM } from 'jsdom';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const html = fs.readFileSync(path.join(root, 'panel/panel.html'), 'utf8');
 
 // --- fake environment responses ---------------------------------------------
