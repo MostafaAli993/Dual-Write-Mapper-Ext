@@ -12,9 +12,15 @@ the F&O UI never shows you — so `Not submitted` is really `Draft`, `Rejected` 
 
 ## Install
 
-1. `chrome://extensions` → enable **Developer mode**
-2. **Load unpacked** → select this folder
-3. Pin the extension, then click its icon to open the panel
+1. Download the zip from the [latest release](https://github.com/MostafaAli993/Dual-Write-Mapper-Ext/releases/latest)
+   and unzip it somewhere permanent (Chrome loads the extension from that folder).
+2. `chrome://extensions` (or `edge://extensions`) → enable **Developer mode**
+3. **Load unpacked** → select the folder that **directly contains `manifest.json`**
+4. Pin the extension, then click its icon to open the panel
+
+> **"Manifest file is missing or unreadable"?** Windows' *Extract All* often creates a folder
+> inside a folder (`Dual-Write-Mapper-Ext-main\Dual-Write-Mapper-Ext-main\`). Select the
+> **inner** folder, the one where you can see `manifest.json`.
 
 ## Use
 
