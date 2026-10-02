@@ -1,0 +1,8 @@
+node_modules/
+*.zip
+*.csv
+*.log
+.DS_Store
+# never commit environment specifics or any credential file, should one ever be added
+config.local.json
+.env

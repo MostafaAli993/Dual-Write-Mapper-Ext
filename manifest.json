@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Dual-write Mapper (D365 F&O <-> Dataverse)",
+  "version": "2.1.0",
+  "description": "Read-only. Enum element names/labels/values and Dataverse choice options for dual-write ValueMaps, F&O entity field lists with recommended Dataverse column types, and entity name lookup (AOT / public / Power Automate collection name).",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.dynamics.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open Dual-write Mapper"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.dynamics.com/*"
+      ],
+      "js": [
+        "lib/entitynames.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

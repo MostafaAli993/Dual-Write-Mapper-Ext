@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dual-write Mapper</title>
+<link rel="stylesheet" href="panel.css">
+</head>
+<body>
+<header>
+  <h1>Dual-write Mapper</h1>
+  <span class="ro-badge" title="Every request is a GET against an allow-listed metadata path.">READ-ONLY</span>
+  <nav class="tabs">
+    <button class="tab active" data-tab="enums">Enums &amp; ValueMaps</button>
+    <button class="tab" data-tab="fields">Entity fields</button>
+    <button class="tab" data-tab="names">Entity names</button>
+  </nav>
+</header>
+
+<section class="card">
+  <h2>Environments</h2>
+  <p class="hint">Open your F&amp;O and Dataverse environments in tabs and sign in. This tool reuses those sessions &mdash; no credentials are stored anywhere.</p>
+  <div class="row">
+    <label>F&amp;O tab
+      <select id="fnoTab"><option value="">-- none detected --</option></select>
+    </label>
+    <label>Dataverse tab
+      <select id="dvTab"><option value="">-- none detected --</option></select>
+    </label>
+    <button id="refreshTabs" class="secondary">Refresh tabs</button>
+  </div>
+</section>
+
+<!-- ===================== ENUMS TAB ===================== -->
+<div id="tab-enums">
+
+<section class="card">
+  <h2>1 &middot; Pull F&amp;O enums</h2>
+  <div class="row">
+    <label>Mode
+      <select id="fnoMode">
+        <option value="enum">A single enum name</option>
+        <option value="search">Search enum names</option>
+        <option value="entity">All enums on an entity</option>
+        <option value="all">Full environment dump</option>
+      </select>
+    </label>
+    <label id="fnoInputWrap">Enum name
+      <input id="fnoInput" placeholder="e.g. CredManCreditLimitAdjStatus" spellcheck="false">
+    </label>
+    <label id="fnoLimitWrap" class="hidden">Limit (blank = all)
+      <input id="fnoLimit" type="number" min="1" placeholder="e.g. 50 for a test run">
+    </label>
+    <button id="runFno">Pull from F&amp;O</button>
+  </div>
+  <div id="fnoStatus" class="status"></div>
+  <div id="fnoResult"></div>
+</section>
+
+<section class="card">
+  <h2>2 &middot; Pull Dataverse choices</h2>
+  <div class="row">
+    <label>Mode
+      <select id="dvMode">
+        <option value="table">Table (+ optional column)</option>
+        <option value="global">All global option sets</option>
+      </select>
+    </label>
+    <label id="dvTableWrap">Table logical name
+      <input id="dvTable" placeholder="e.g. arq_quoteapproval" spellcheck="false">
+    </label>
+    <label id="dvColWrap">Column (optional)
+      <input id="dvColumn" placeholder="e.g. arq_approvalstatus" spellcheck="false">
+    </label>
+    <button id="runDv">Pull from Dataverse</button>
+  </div>
+  <div id="dvStatus" class="status"></div>
+  <div id="dvResult"></div>
+</section>
+
+<section class="card">
+  <h2>3 &middot; Cross-reference &amp; generate ValueMap</h2>
+  <div class="row">
+    <label>F&amp;O enum
+      <select id="cmpFno"></select>
+    </label>
+    <label>Dataverse choice column
+      <select id="cmpDv"></select>
+    </label>
+    <label>F&amp;O key casing
+      <select id="casing">
+        <option value="lower" selected>lowercase (your environment)</option>
+        <option value="exact">exact AOT name</option>
+      </select>
+    </label>
+    <label>Direction
+      <select id="direction">
+        <option value="fnoToDv" selected>F&amp;O name &rarr; Dataverse value</option>
+        <option value="dvToFno">Dataverse value &rarr; F&amp;O name</option>
+      </select>
+    </label>
+    <label class="check" title="Fallback passes used when a label-to-label match fails.">
+      <span>Fallback matching</span>
+      <span class="checkline"><input type="checkbox" id="nameFallback" checked> element name &rarr; Dataverse label</span>
+      <span class="checkline"><input type="checkbox" id="fuzzy" checked> ignore words the enum name repeats (near matches)</span>
+    </label>
+    <button id="runCmp">Compare</button>
+  </div>
+  <div id="cmpResult"></div>
+</section>
+
+<section class="card">
+  <h2>4 &middot; Exports</h2>
+  <div class="row">
+    <button id="dlEnumCsv" class="secondary">Download enum CSV</button>
+    <button id="dlCmpCsv" class="secondary">Download comparison CSV</button>
+    <button id="dlJson" class="secondary">Download raw JSON snapshot</button>
+    <button id="clearCache" class="danger">Clear caches</button>
+  </div>
+  <div id="exportStatus" class="status"></div>
+</section>
+
+</div>
+
+<!-- ===================== FIELDS TAB ===================== -->
+<div id="tab-fields" class="hidden">
+
+<section class="card">
+  <h2>1 &middot; Pull F&amp;O entity fields</h2>
+  <p class="hint">Every field on the entity with its type, plus a recommended Dataverse column type for each one.</p>
+  <div class="row">
+    <label>Entity name
+      <input id="fldEntity" list="entityList" placeholder="e.g. RM_CredManCreditLimitAdjTableEntity" spellcheck="false">
+      <datalist id="entityList"></datalist>
+    </label>
+    <button id="loadEntityList" class="secondary" title="Load the entity list so the box above autocompletes">Load entity list</button>
+    <label class="check">
+      <input type="checkbox" id="useEdm">
+      <span>Enrich with $metadata (length / precision)</span>
+    </label>
+    <button id="runFields">Pull fields</button>
+  </div>
+  <p class="hint" id="edmHint">
+    Heads-up: the Metadata REST API does <strong>not</strong> publish MaxLength, Precision or Scale.
+    Ticking the box downloads <code>/data/$metadata</code> once per tab (large) and reads the EDM facets if your build
+    emits them. If it doesn't, the tool says so rather than guessing.
+    <button id="probeEdm" class="linkish">Check what this environment publishes</button>
+  </p>
+  <div id="fldStatus" class="status"></div>
+  <div id="fldResult"></div>
+</section>
+
+<section class="card">
+  <h2>2 &middot; Compare against a Dataverse table</h2>
+  <div class="row">
+    <label>Table logical name
+      <input id="fldDvTable" placeholder="e.g. arq_salescontracts" spellcheck="false">
+    </label>
+    <label>Publisher prefix
+      <input id="fldPrefix" value="arq_" spellcheck="false" style="min-width:90px">
+    </label>
+    <label class="check">
+      <input type="checkbox" id="inclSystem">
+      <span>Include system columns</span>
+    </label>
+    <button id="runFldCompare">Compare</button>
+  </div>
+  <div id="fldCmpStatus" class="status"></div>
+  <div id="fldCmpResult"></div>
+</section>
+
+<section class="card">
+  <h2>3 &middot; Exports</h2>
+  <div class="row">
+    <button id="dlFieldsCsv" class="secondary">Download field list CSV</button>
+    <button id="dlFldCmpCsv" class="secondary">Download comparison CSV</button>
+    <button id="dlChecklist">Download "columns to create" checklist</button>
+  </div>
+  <div id="fldExportStatus" class="status"></div>
+</section>
+
+</div>
+
+<!-- ===================== NAMES TAB ===================== -->
+<div id="tab-names" class="hidden">
+
+<section class="card">
+  <h2>1 &middot; Look up entity names</h2>
+  <p class="hint">
+    Data management shows the <strong>AOT name</strong> (e.g. <code>RMTaxRegistrationOnCustomerEntity</code>).
+    The Power Automate Fin &amp; Ops connector lists the <strong>public collection name</strong>, which the developer sets freely
+    and which can look nothing like it (<code>RMCustomerRegisterations</code>). Paste any of the three names, or a misspelling,
+    one per line, and get all three back.
+  </p>
+  <div class="row">
+    <label class="grow">Entity name(s)
+      <textarea id="nmInput" rows="4" spellcheck="false" placeholder="RMTaxRegistrationOnCustomerEntity&#10;RM_CredManCreditLimitAdjTableEntity&#10;SalesCommessionExecutions"></textarea>
+    </label>
+    <div class="stack">
+      <label class="check" title="One GET of one row from /data/&lt;collection&gt; - the same endpoint Power Automate calls. Proves the connector can reach it.">
+        <span class="checkline"><input type="checkbox" id="nmVerify" checked> check each one live on /data</span>
+      </label>
+      <label class="check" title="The data entity list is cached per environment. Tick this after the developer deploys a new entity.">
+        <span class="checkline"><input type="checkbox" id="nmRefresh"> reload the entity list (new deployment)</span>
+      </label>
+      <button id="runNames">Look up</button>
+    </div>
+  </div>
+  <div id="nmStatus" class="status"></div>
+  <div id="nmResult"></div>
+</section>
+
+<section class="card">
+  <h2>2 &middot; Exports</h2>
+  <div class="row">
+    <button id="dlNamesCsv" class="secondary">Download names CSV</button>
+  </div>
+  <div id="nmExportStatus" class="status"></div>
+</section>
+
+</div>
+
+<script src="../lib/entitynames.js"></script>
+<script type="module" src="panel.js"></script>
+</body>
+</html>
