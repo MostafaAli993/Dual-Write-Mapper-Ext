@@ -373,3 +373,7 @@ to refresh the connector's cached entity list, or type the collection name as a 
 
 `node fixtures/names.test.mjs` covers the matcher and runs the content-script job against a fake F&O server
 (filter miss → case-insensitive hit, misspelling → fuzzy, non-public entity, live check URL shape).
+
+## License
+
+[MIT](LICENSE) © 2026 Mostafa Ali
