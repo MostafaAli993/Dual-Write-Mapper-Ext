@@ -31,7 +31,7 @@ the F&O UI never shows you — so `Not submitted` is really `Draft`, `Rejected` 
 3. **Pull F&O enums** — one of:
    - a single enum name (`CredManCreditLimitAdjStatus`)
    - **search enum names** — type any fragment (`status`, `creditlimit`) and click a result
-   - an entity name (`RM_CredManCreditLimitAdjTableEntity`) → every enum-typed property on it
+   - an entity name (`CredManCreditLimitAdjTableEntity`) → every enum-typed property on it
    - a full environment dump (set a limit first for a smoke test)
 
    > **The name in the F&O UI is not the enum name.** *Form information* shows the
