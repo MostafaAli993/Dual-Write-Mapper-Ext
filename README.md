@@ -374,14 +374,6 @@ DataEntities, never from what you typed.
 A 404 there means OData is not serving the entity (DataServiceEnabled off, or the entity is not built/synced in that
 environment). If the check passes but the connector dropdown still does not list it, re-select the *Instance* in the action
 to refresh the connector's cached entity list, or type the collection name as a custom value.
-
-## Tests
-
-`node fixtures/names.test.mjs` covers the matcher and runs the content-script job against a fake F&O server
-(filter miss → case-insensitive hit, misspelling → fuzzy, non-public entity, live check URL shape).
-
-Run every suite at once with `npm install` (one-time, pulls in jsdom) then `npm test`.
-
 ## License
 
 [MIT](LICENSE) © 2026 Mostafa Ali
