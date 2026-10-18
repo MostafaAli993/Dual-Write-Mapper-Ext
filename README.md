@@ -1,72 +1,76 @@
 # Dual-write Enum Mapper
 
-A read-only Chrome extension that pulls **F&O AOT enum element names, labels and integer
-values** and **Dataverse choice options**, cross-references them by label text, and
-generates ready-to-paste dual-write `ValueMap` JSON.
+A read-only Chrome extension that pulls F&O AOT enum element names, labels and integer
+values, along with Dataverse choice options. It matches the two by label text and
+generates dual-write `ValueMap` JSON you can paste straight into a map.
 
-It exists because dual-write `ValueMap` transforms match on the F&O *element name*, which
-the F&O UI never shows you — so `Not submitted` is really `Draft`, `Rejected` is really
-`Denied`, and you only find out when a sync run fails.
-
----
+Dual-write `ValueMap` transforms match on the F&O element name, and the F&O UI never
+shows you that name. `Not submitted` is really `Draft`, `Rejected` is really `Denied`,
+and you only find out when a sync run fails.
 
 ## Install
 
 1. Download the zip from the [latest release](https://github.com/MostafaAli993/Dual-Write-Mapper-Ext/releases/latest)
-   and unzip it somewhere permanent (Chrome loads the extension from that folder).
-2. `chrome://extensions` (or `edge://extensions`) → enable **Developer mode**
-3. **Load unpacked** → select the folder that **directly contains `manifest.json`**
-4. Pin the extension, then click its icon to open the panel
+   and unzip it somewhere permanent. Chrome loads the extension from that folder.
+2. Open `chrome://extensions` (or `edge://extensions`) and turn on **Developer mode**.
+3. Click **Load unpacked** and select the folder that directly contains `manifest.json`.
+4. Pin the extension, then click its icon to open the panel.
 
-> **"Manifest file is missing or unreadable"?** Windows' *Extract All* often creates a folder
-> inside a folder (`Dual-Write-Mapper-Ext-main\Dual-Write-Mapper-Ext-main\`). Select the
-> **inner** folder, the one where you can see `manifest.json`.
+> If Chrome says "Manifest file is missing or unreadable", check which folder you picked.
+> Windows' *Extract All* often creates a folder inside a folder
+> (`Dual-Write-Mapper-Ext-main\Dual-Write-Mapper-Ext-main\`). Select the inner one, where
+> you can see `manifest.json`.
 
 ## Use
 
-1. Open your F&O environment and your Dataverse environment in tabs, signed in.
-   (`https://contoso-uat.sandbox.operations.eu.dynamics.com` and
-   `https://contoso.crm4.dynamics.com`.)
-2. Click the extension icon. The panel auto-detects both tabs.
-3. **Pull F&O enums** — one of:
+1. Open your F&O environment and your Dataverse environment in separate tabs and sign in
+   to both, for example `https://contoso-uat.sandbox.operations.eu.dynamics.com` and
+   `https://contoso.crm4.dynamics.com`.
+2. Click the extension icon. The panel finds both tabs on its own.
+3. Click **Pull F&O enums** with one of these:
    - a single enum name (`CredManCreditLimitAdjStatus`)
-   - **search enum names** — type any fragment (`status`, `creditlimit`) and click a result
-   - an entity name (`CredManCreditLimitAdjTableEntity`) → every enum-typed property on it
-   - a full environment dump (set a limit first for a smoke test)
+   - part of a name, using **search enum names**: type any fragment (`status`,
+     `creditlimit`) and click a result
+   - an entity name (`CredManCreditLimitAdjTableEntity`), which pulls every enum-typed
+     property on it
+   - a full environment dump (set a limit first if you only want a smoke test)
 
-   > **The name in the F&O UI is not the enum name.** *Form information* shows the
-   > **data field** (e.g. `Status` on `CredManCreditLimitAdjTable`). The enum *type* behind
-   > that field has a different name (`CredManCreditLimitAdjStatus` or similar). If you enter
-   > a field name, the tool detects that it is not an enum type, searches the full enum list
-   > and offers ranked matches to click — so you never have to guess.
-4. **Pull Dataverse choices** — a table logical name (+ optional column), or every global
-   option set.
-5. **Compare** — pick the F&O enum and the Dataverse column, hit Compare.
-6. Copy the ValueMap JSON, or download the CSVs.
+   > The name you see in the F&O UI is the data field, and the enum type behind it has a
+   > different name. *Form information* shows the field (for example `Status` on
+   > `CredManCreditLimitAdjTable`), while the enum type is `CredManCreditLimitAdjStatus`
+   > or similar. If you enter a field name, the tool notices it isn't an enum type,
+   > searches the full enum list and offers ranked matches to click, so you don't have
+   > to guess.
+4. Click **Pull Dataverse choices** with a table logical name (and optionally a column),
+   or pull every global option set.
+5. Pick the F&O enum and the Dataverse column, then click **Compare**.
+6. Copy the ValueMap JSON or download the CSVs.
 
 ## Authentication
 
-There is none to configure. The content script runs *inside* your already-authenticated
-environment tab, so every request is same-origin and rides your existing session cookie.
-No app registration, no client secret, no consent grant, nothing stored.
+There's nothing to configure. The content script runs inside the environment tab you're
+already signed in to, so every request is same-origin and uses your existing session
+cookie. There's no app registration, client secret or consent grant, and nothing is
+stored.
 
-This was a deliberate choice over client credentials: an unpacked extension cannot hold a
-secret safely — anything bundled is readable by anyone who opens the folder. It also
-sidesteps a real technical problem: fetching from the extension's service worker is a
-third-party context, so `SameSite=Lax` session cookies would not be sent at all.
+Client credentials were ruled out on purpose. An unpacked extension can't hold a secret
+safely, because anyone who opens the folder can read whatever is bundled with it. Using
+the tab's own session also avoids a technical problem: a fetch from the extension's
+service worker runs in a third-party context, so the browser would never send the
+`SameSite=Lax` session cookies.
 
-If you later want this headless (CI, scheduled dumps), the seam to replace is `safeGet()`
-in `content.js` — swap the cookie fetch for a bearer token and the rest of the pipeline is
-unchanged.
+If you later want to run this headless (CI, scheduled dumps), replace `safeGet()` in
+`content.js`. Swap the cookie fetch for a bearer token and the rest of the pipeline stays
+the same.
 
 ## Read-only guarantees
 
-- Exactly one `fetch()` call exists in the whole codebase (`content.js`, `safeGet`).
+- The codebase has exactly one `fetch()` call (`content.js`, `safeGet`).
 - It hardcodes `method: 'GET'`.
-- Every URL is checked against `READ_ALLOWLIST` before the request is made. Anything
-  cross-origin, or any path outside the six metadata routes below, throws.
-- The manifest requests only `storage`, `unlimitedStorage` and `tabs`. No `webRequest`,
-  no `scripting`, no `downloads`.
+- Every URL is checked against `READ_ALLOWLIST` before the request goes out. A
+  cross-origin URL, or any path outside the metadata routes below, throws.
+- The manifest asks only for `storage`, `unlimitedStorage` and `tabs`. It doesn't ask
+  for `webRequest`, `scripting` or `downloads`.
 
 Allow-listed routes:
 
@@ -80,45 +84,45 @@ Allow-listed routes:
 /api/data/v9.x/GlobalOptionSetDefinitions...
 ```
 
-Verify it yourself: `grep -rn "fetch(" .` returns one hit.
+To check this yourself, run `grep -rn "fetch(" .`. It returns one hit.
 
 ## Performance
 
-- **Label cache** — resolved `LabelId → text` pairs persist in `chrome.storage.local`
-  under `dwem:labelcache:en-us`, keyed by label ID, and survive browser restarts. The
-  same `@SYS` IDs repeat constantly across enums, so a second full dump is dramatically
-  faster than the first. *Clear label cache* in section 5 resets it.
-- **Throttling** — `429`/`502`/`503` responses honour `Retry-After`, otherwise
-  exponential backoff with jitter, up to 5 retries. The backoff gate is global, so when
-  the environment starts throttling, every in-flight request backs off together.
-- **Concurrency** — capped at 4 parallel requests.
-- **Paging** — `@odata.nextLink` is followed to exhaustion on both APIs.
+- Resolved `LabelId → text` pairs are cached in `chrome.storage.local` under
+  `dwem:labelcache:en-us`, keyed by label ID, and survive browser restarts. The same
+  `@SYS` IDs show up again and again across enums, so a second full dump is much faster
+  than the first. **Clear label cache** in section 5 resets it.
+- On a `429`, `502` or `503` response the tool honours `Retry-After`. Without one, it
+  uses exponential backoff with jitter, up to 5 retries. The backoff gate is global, so
+  once the environment starts throttling, every in-flight request backs off together.
+- At most 4 requests run in parallel.
+- `@odata.nextLink` is followed to the last page on both APIs.
 
 ## Error handling
 
-Failures are reported per-item, not as a stack trace, and one failure never aborts a dump:
+Failures are reported per item, and one failure never stops a dump:
 
-- an enum name that does not resolve → row in the results marked `failed`, with a note
-  that the metadata service is case-sensitive on the AOT name
-- a `LabelId` that will not resolve → label shows as `(unresolved)`, dump continues
-- a column that is not a choice column → error listing the choice columns that *do* exist
-  on that table
-- an expired session → "reload the environment tab and sign in again" rather than a JSON
-  parse error
+- An enum name that doesn't resolve shows up as a `failed` row in the results, with a
+  note that the metadata service is case-sensitive on the AOT name.
+- A `LabelId` that won't resolve shows as `(unresolved)`, and the dump carries on.
+- A column that isn't a choice column produces an error listing the choice columns that
+  do exist on that table.
+- An expired session tells you to reload the environment tab and sign in again, instead
+  of showing a JSON parse error.
 
 ## Outputs
 
 | Export | Contents |
 |---|---|
-| Enum CSV | Every enum / element name / label / integer value, plus a `NameDivergesFromLabel` column |
-| Comparison CSV | Matched pairs, F&O-only, Dataverse-only, divergence flags — the client/developer handoff document |
-| JSON snapshot | Raw pulled data, for diffing between runs |
-| ValueMap JSON | Copy-to-clipboard, in the exact transform shape |
+| Enum CSV | Every enum, element name, label and integer value, plus a `NameDivergesFromLabel` column |
+| Comparison CSV | Matched pairs, F&O-only, Dataverse-only and divergence flags. This is the file you hand between client and developer. |
+| JSON snapshot | The raw pulled data, for diffing between runs |
+| ValueMap JSON | Copied to the clipboard in the exact transform shape |
 
-ValueMap output is configurable on two axes:
+You can set the ValueMap output two ways:
 
-- **Casing** — lowercase (the form that resolves in your environment) or exact AOT casing
-- **Direction** — F&O name → Dataverse value, or Dataverse value → F&O name
+- Casing: lowercase (the form that resolves in your environment) or exact AOT casing.
+- Direction: F&O name to Dataverse value, or Dataverse value to F&O name.
 
 ```json
 [
@@ -134,43 +138,44 @@ ValueMap output is configurable on two axes:
 
 ## Matching rules
 
-Labels are compared after normalisation: Unicode NFD, diacritics stripped, lowercased,
-everything that is not `[a-z0-9]` removed. So `Not submitted`, `Not Submitted` and
-`not-submitted` all collapse to `notsubmitted`.
+Labels are normalised before they're compared: Unicode NFD, diacritics stripped,
+lowercased, and anything outside `[a-z0-9]` removed. `Not submitted`, `Not Submitted`
+and `not-submitted` all become `notsubmitted`.
 
-Where two Dataverse options normalise to the same text, the first wins and the pair is
-flagged as ambiguous — check those by hand.
+If two Dataverse options normalise to the same text, the first one wins and the pair is
+flagged as ambiguous. Check those by hand.
 
-Matching runs in four passes. Each one only sees what the passes before it could not
-place, and each Dataverse option is claimed at most once — so the stronger evidence
-always wins the option:
+Matching runs in four passes. Each pass only sees what the earlier ones couldn't place,
+and each Dataverse option can be claimed once, so the strongest evidence always gets the
+option first.
 
-1. **Label → label.** F&O element label against Dataverse option label.
-2. **Element name → label.** Elements F&O gave no usable label for (`@SYS` id that did
-   not resolve, missing label file, a translation the metadata call did not return) are
-   retried with the AOT element name compared against the Dataverse option label, under
-   the same normalisation. That is how `SASOASTM` finds `SASO-ASTM`, `RoyalCommission`
-   finds `Royal Commission` and `NotSet` finds `Not Set`.
-3. **Near match, shared words dropped.** The words the enum name and the Dataverse column
-   name repeat are removed from the front and back of both sides before comparing —
-   for enum `QM_StandardType` on column `arq_standardtype` that is *standard* and *type*
-   (plurals folded), so element `NationalStandards` reduces to `national` and meets
-   option `National`, and `SRMCCStandards` meets `SRMCC`. Stripping never empties a name.
-4. **Near match, containment.** One reduced key contains the other, the lengths are
+1. Label to label. The F&O element label is compared with the Dataverse option label.
+2. Element name to label. Some elements have no usable F&O label: an `@SYS` id that
+   didn't resolve, a missing label file, or a translation the metadata call didn't
+   return. Those are retried using the AOT element name against the Dataverse option
+   label, with the same normalisation. That's how `SASOASTM` finds `SASO-ASTM`,
+   `RoyalCommission` finds `Royal Commission` and `NotSet` finds `Not Set`.
+3. Near match, shared words dropped. Words that the enum name and the Dataverse column
+   name have in common are removed from the start and end of both sides before
+   comparing. For enum `QM_StandardType` on column `arq_standardtype` those words are
+   *standard* and *type* (plurals folded), so element `NationalStandards` reduces to
+   `national` and matches option `National`, and `SRMCCStandards` matches `SRMCC`.
+   Stripping never leaves a name empty.
+4. Near match by containment. One reduced key contains the other, their lengths are
    within 70% of each other, and exactly one Dataverse option qualifies.
 
-Passes 3 and 4 are guesses and are labelled as such: they only fire when a single
-Dataverse option is left that fits, they are counted separately, they get their own
-review callout listing what was compared, they are tagged `NEAR MATCH` in the *Matched
-on* column, and they carry `MatchedBy = near match` plus a
-`MATCHED - NEAR MATCH (REVIEW)` status in the comparison CSV. Read them before you paste
-the JSON. Pass 2 pairs are tagged `ELEMENT NAME` the same way.
+Passes 3 and 4 are guesses, and the tool labels them that way. They only fire when a
+single Dataverse option is left that fits. They're counted separately and get their own
+review callout listing what was compared. In the *Matched on* column they're tagged
+`NEAR MATCH`, and in the comparison CSV they carry `MatchedBy = near match` and the
+status `MATCHED - NEAR MATCH (REVIEW)`. Read them before you paste the JSON. Pass 2 pairs
+are tagged `ELEMENT NAME` in the same way.
 
-Both fallbacks have a tick box in section 3 (**Fallback matching**), so you can drop back
-to label-only behaviour at any time.
+Both fallbacks have a checkbox in section 3 (**Fallback matching**), so you can switch
+back to label-only matching whenever you like.
 
-The generated ValueMap is unaffected by which pass produced the pair: the key is the AOT
-element name either way, which is what dual write reads.
+The pass that produced a pair has no effect on the generated ValueMap. The key is always
+the AOT element name, because that's what dual-write reads.
 
 ## Tests
 
@@ -178,18 +183,21 @@ element name either way, which is what dual write reads.
 node fixtures/test.mjs
 ```
 
-Covers normalisation, matching, divergence detection, both ValueMap directions, both
-casings, the exact 4-space JSON shape, CSV quoting/escaping, and the error row path.
-The fixture reproduces your real case: label `Not submitted` → name `Draft`, label
-`Rejected` → name `Denied`. A second fixture covers the fully unlabelled enum
-(`NotSet`/`ASTM`/`SASOASTM`… against `Not Set`/`ASTM`/`SASO-ASTM`…): all nine elements
-match by name, the fallback can be switched off, and a label match wins a contested
-option. A third covers the shared-word case (`QM_StandardType`:
-`InternationalStandards`/`NationalStandards`/`SRMCCStandards` against
-`International`/`National`/`SRMCC`) and checks the things that would make the near-match
-pass dangerous: `National` is not swallowed by `International`, an unrelated element
-(`Zebra`) is still left unmatched rather than forced into the last free option, and an
-exact name match beats a near match for the same option.
+The tests cover normalisation, matching, divergence detection, both ValueMap directions,
+both casings, the exact 4-space JSON shape, CSV quoting and escaping, and the error row
+path. There are three fixtures:
+
+- The first reproduces the case at the top of this README: label `Not submitted` with
+  name `Draft`, and label `Rejected` with name `Denied`.
+- The second is a fully unlabelled enum (`NotSet`/`ASTM`/`SASOASTM`… against
+  `Not Set`/`ASTM`/`SASO-ASTM`…). All nine elements match by name, the fallback can be
+  turned off, and a label match wins a contested option.
+- The third covers shared words (`QM_StandardType`:
+  `InternationalStandards`/`NationalStandards`/`SRMCCStandards` against
+  `International`/`National`/`SRMCC`). It checks the cases that would make the
+  near-match pass dangerous. `National` isn't swallowed by `International`, an unrelated
+  element (`Zebra`) stays unmatched instead of being forced into the last free option,
+  and an exact name match beats a near match for the same option.
 
 ## Layout
 
@@ -202,74 +210,72 @@ panel/             the UI
 fixtures/          sample data + assertions
 ```
 
----
-
 # Entity fields (added in 2.0)
 
-The second tab answers a different question: *a new F&O entity is coming into
-dual-write scope — which CE columns do I need to create, and of what type?*
+The second tab is for when a new F&O entity comes into dual-write scope and you need to
+know which CE columns to create, and what type each one should be.
 
 ## Use
 
-1. **Entity fields** tab → type an entity name (data entity or public entity name;
-   it resolves either) → **Pull fields**. *Load entity list* turns the box into an
-   autocomplete.
-2. Optionally tick **Enrich with $metadata** for string length and decimal precision.
-   Read the caveat below first.
-3. Enter a Dataverse table logical name → **Compare**. The columns you still need to
-   create come first, because that is the output you are actually there for.
-4. Download the **checklist** — one row per column to create, with a suggested
-   `arq_` logical name, display name, type, length and behaviour.
+1. On the **Entity fields** tab, type an entity name (a data entity or public entity
+   name; either one resolves) and click **Pull fields**. **Load entity list** turns the
+   box into an autocomplete.
+2. If you want string length and decimal precision, tick **Enrich with $metadata**. Read
+   the caveat below first.
+3. Enter a Dataverse table logical name and click **Compare**. The columns you still need
+   to create are listed first, since that's the list you came for.
+4. Download the checklist. It has one row per column to create, with a suggested `arq_`
+   logical name, display name, type, length and behaviour.
 
 ## Which name to type, and what "not found" means
 
-Data management shows the **target entity** name — `ProjInvoiceProposalV2Entity`. The
-Metadata REST API indexes `/metadata/PublicEntities` by the **public entity** name,
-which is usually that minus the word `Entity`. The tool resolves between them for you,
+Data management shows the target entity name, such as `ProjInvoiceProposalV2Entity`.
+The Metadata REST API indexes `/metadata/PublicEntities` by the public entity name,
+which is usually the same name without the word `Entity`. The tool resolves between them
 in this order:
 
 1. the name as typed, against `PublicEntities`;
-2. the name minus a trailing `Entity`, against `PublicEntities`;
+2. the name without a trailing `Entity`, against `PublicEntities`;
 3. `/metadata/DataEntities` filtered on `Name`, `PublicEntityName` or
-   `PublicCollectionName` (server-side `$filter` first, full scan as a fallback), then
-   whatever public name that row points at;
+   `PublicCollectionName` (a server-side `$filter` first, then a full scan if that
+   fails), followed by whatever public name that row points to;
 4. the cached public entity list, ignoring case and punctuation.
 
-If all four fail, the tool now says **why**, because the three reasons need different
-actions and used to look identical:
+If all four fail, the tool tells you why. There are three possible reasons, each one
+needs a different fix, and they used to look identical:
 
 | What you see | What it means |
 | --- | --- |
-| *exists as a data entity, but is not exposed as a public entity* | The entity is real; it has no public surface, so the API publishes no fields or keys for it. Fields and keys can only be read in F&O (Data management → **Entity structure** / **Target fields**, or the AOT). Dual write needs a public entity, so this is one for the F&O partner. |
-| *public name X, but PublicEntities returned nothing* | OData is switched off for it (`DataServiceEnabled = No`). Usable in Data management, not through this API. |
-| *not found as a public entity or a data entity* | Wrong name or wrong environment — close matches are offered as chips. |
-| *Could not read metadata … HTTP 401/403/500* | Transport or permission, not a missing entity. Reload the F&O tab and retry. |
+| *exists as a data entity, but is not exposed as a public entity* | The entity exists but has no public surface, so the API publishes no fields or keys for it. You can only read its fields and keys inside F&O (Data management → **Entity structure** / **Target fields**, or the AOT). Dual-write needs a public entity, so raise this with the F&O partner. |
+| *public name X, but PublicEntities returned nothing* | OData is turned off for it (`DataServiceEnabled = No`). You can use it in Data management, but not through this API. |
+| *not found as a public entity or a data entity* | Wrong name or wrong environment. Close matches appear as chips. |
+| *Could not read metadata … HTTP 401/403/500* | A transport or permission error. The entity itself isn't the problem. Reload the F&O tab and retry. |
 
-Whatever the outcome, the panel lists the names it tried and, when F&O knows the entity
-at all, prints its data entity name, public entity name, public collection name, entity
-category and the `DataServiceEnabled` / `DataManagementEnabled` / read-only flags.
+Whatever the outcome, the panel lists the names it tried. If F&O knows the entity at
+all, it also prints the data entity name, public entity name, public collection name,
+entity category, and the `DataServiceEnabled` / `DataManagementEnabled` / read-only
+flags.
 
-## Length, precision and scale: read this
+## Caveat: length, precision and scale
 
-**The Metadata REST API does not publish them.** A `PublicEntities` property carries
-`Name`, `TypeName`, `DataType`, `LabelId`, `IsKey`, `IsMandatory`, `ConfigurationEnabled`,
-`AllowEdit`, `AllowEditOnCreate` and the dimension fields. That is the whole list.
+The Metadata REST API doesn't publish them. A `PublicEntities` property carries `Name`,
+`TypeName`, `DataType`, `LabelId`, `IsKey`, `IsMandatory`, `ConfigurationEnabled`,
+`AllowEdit`, `AllowEditOnCreate` and the dimension fields, and nothing else.
 
-`/data/$metadata` *may* carry them as EDM facets, depending on the build. Some F&O
-environments emit `MaxLength` and `Precision` on properties; many do not, and the
+`/data/$metadata` might carry them as EDM facets, depending on the build. Some F&O
+environments emit `MaxLength` and `Precision` on properties, and many don't. The
 documented fallback for field lengths is reading `SQLDictionary` from the database,
-which a browser extension cannot reach.
+which a browser extension can't reach.
 
-So the tool looks, and then tells you what it found. **Check what this environment
-publishes** (next to the checkbox) samples the document and reports the answer in one
-click. Where a facet is absent, the field list says `not published` and the notes tell
-you to confirm with the F&O developer. It never invents a number.
+So the tool checks and reports what it found. **Check what this environment publishes**,
+next to the checkbox, samples the document and gives you the answer in one click. Where
+a facet is missing, the field list says `not published` and the notes tell you to
+confirm with the F&O developer. The tool never makes up a number.
 
-Note also that there is **no property-level `IsReadOnly`** in this API. `IsReadOnly`
-exists only at entity level. Per field you get `AllowEdit` and `AllowEditOnCreate`,
-which the tool renders as `read-only` and `create-only` pills — a `create-only` field
-accepts a value on insert and rejects it on update, which is worth knowing before you
-map it bidirectionally.
+This API also has no property-level `IsReadOnly`; `IsReadOnly` exists only at entity
+level. Per field you get `AllowEdit` and `AllowEditOnCreate`, which the tool shows as
+`read-only` and `create-only` pills. A `create-only` field accepts a value on insert and
+rejects it on update, which matters if you plan to map it in both directions.
 
 ## Type mapping
 
@@ -277,49 +283,50 @@ map it bidirectionally.
 |---|---|---|
 | String | Single Line of Text | Multiple Lines of Text above 4000 |
 | Int32 | Whole Number | |
-| Int64 | Whole Number | **flagged** — Dataverse Whole Number is 32-bit |
-| Decimal | Decimal Number | precision carried across when published |
-| Real | **Decimal Number** | *not* Floating Point — see below |
+| Int64 | Whole Number | Flagged: Dataverse Whole Number is 32-bit |
+| Decimal | Decimal Number | Precision carried across when published |
+| Real | Decimal Number | Not Floating Point (see below) |
 | Enum | Choice | ValueMap transform required |
-| Enum `NoYes` | Yes/No | **flagged** — may need Choice + ValueMap instead |
+| Enum `NoYes` | Yes/No | Flagged: may need Choice + ValueMap instead |
 | Boolean | Yes/No | |
 | Date | Date Only | Behavior: Time Zone Independent |
 | DateTime / UtcDateTime | Date and Time | Behavior: Time Zone Independent |
-| Guid | Single Line of Text (36) | no creatable GUID type in Dataverse |
-| Container / blob | *not mappable* | excluded from the comparison entirely |
+| Guid | Single Line of Text (36) | Dataverse has no GUID type you can create |
+| Container / blob | Not mappable | Left out of the comparison entirely |
 
-Four of these deliberately differ from the obvious mapping:
+Four of these differ from the obvious mapping on purpose:
 
-- **Real → Decimal, not Floating Point.** X++ `Real` is fixed-point. Floating Point
-  introduces rounding drift on amounts and quantities that then fail to reconcile
-  against F&O.
-- **Int64 is flagged.** Dataverse Whole Number tops out at 2,147,483,647. An Int64
-  field that exceeds it fails on the first row that does, not at map-save time.
-- **NoYes is flagged.** When `NoYes` surfaces as an enum-typed property rather than a
-  boolean, F&O can send the string `"yes"` against a CE Yes/No column and throw
-  DIPV1030. The tool tells you which shape it actually is.
-- **DateTime carries a Behavior recommendation.** Behavior is immutable once a
-  Dataverse column exists, and dual-write generally wants Time Zone Independent.
-  Getting it wrong means dropping and recreating the column.
+- Real maps to Decimal, not Floating Point. X++ `Real` is fixed-point. Floating Point
+  adds rounding drift to amounts and quantities, which then won't reconcile against F&O.
+- Int64 is flagged. Dataverse Whole Number tops out at 2,147,483,647. An Int64 field
+  fails on the first row whose value goes over that, and saving the map won't warn you.
+- NoYes is flagged. When `NoYes` comes through as an enum-typed property instead of a
+  boolean, F&O can send the string `"yes"` to a CE Yes/No column and throw DIPV1030. The
+  tool tells you which shape you actually have.
+- DateTime comes with a Behavior recommendation. You can't change Behavior once a
+  Dataverse column exists, and dual-write generally wants Time Zone Independent. If you
+  get it wrong, you have to drop the column and create it again.
 
 ## Comparison buckets
 
-1. **Missing in CE** — the columns to create. First, always.
-2. **Type mismatch** — exists, wrong type, with both actual and recommended shown.
-3. **Size / behaviour mismatch** — right type, different length, precision or DateTime Behavior.
-4. **Matched** — fine.
-5. **CE only** — columns with no F&O counterpart.
+1. Missing in CE: the columns to create. This bucket always comes first.
+2. Type mismatch: the column exists with the wrong type. Both the actual and the
+   recommended type are shown.
+3. Size / behaviour mismatch: right type, but a different length, precision or DateTime
+   Behavior.
+4. Matched: nothing to do.
+5. CE only: columns with no F&O counterpart.
 
-Custom columns and the primary key are compared by default; tick *Include system
-columns* to widen it. Names are matched with the publisher prefix stripped, so
+By default the comparison covers custom columns and the primary key. Tick *Include
+system columns* to widen it. Names are matched with the publisher prefix stripped, so
 `CUSTOMERACCOUNT` matches `arq_customeraccount`.
 
-## Read-only, still
+## Still read-only
 
-The new feature adds exactly one route to the allowlist: `/data/$metadata`, GET.
-There is still exactly one `fetch()` in the codebase and it still hardcodes
-`method: 'GET'`. `/data/SalesTable` and every other data path remain refused, and
-the tool never attempts to create a CE column — it tells you what to create.
+This feature adds one route to the allowlist: `/data/$metadata`, GET only. There's still
+exactly one `fetch()` in the codebase, and it still hardcodes `method: 'GET'`.
+`/data/SalesTable` and every other data path are still refused. The tool never tries to
+create a CE column; it tells you what to create.
 
 ## Tests
 
@@ -330,50 +337,57 @@ node fixtures/edm.test.mjs      # $metadata parsing, run against the shipped sou
 node fixtures/panel.smoke.mjs   # full UI drive-through in jsdom (run `npm install` first)
 ```
 
-
----
-
 # Entity names tab (v2.1)
 
-An F&O data entity has three names, and each tool shows a different one:
+An F&O data entity has three names, and different tools show different ones:
 
 | Name | Where you see it | Example |
 |---|---|---|
 | AOT name | Data management → *Target entity* | `RMTaxRegistrationOnCustomerEntity` |
 | Public entity name | OData type, Metadata REST API, the Entity fields tab | `RMCustomerRegisteration` |
-| Public collection name | **Power Automate Fin & Ops connector** entity list, `/data/<name>` URLs | `RMCustomerRegisterations` |
+| Public collection name | Power Automate Fin & Ops connector entity list, `/data/<name>` URLs | `RMCustomerRegisterations` |
 
-The developer sets the public names freely, so they can look nothing like the AOT name (and may be misspelled, as above).
-Searching the connector dropdown for the Data management name then finds nothing, and a custom value built from it fails with
-`GetTable ... NotFound`.
+The developer picks the public names freely, so they can look nothing like the AOT name,
+and they may be misspelled, as in the example above. If you search the connector
+dropdown for the Data management name you'll find nothing, and a custom value built from
+that name fails with `GetTable ... NotFound`.
 
 ## Use
 
-1. Pick the F&O tab in *Environments*.
-2. Open **Entity names**, paste one or more names (any of the three, one per line, commas also work), click **Look up**.
-3. Each result shows the Power Automate name large with a **Copy** button, all three names, the label, and the OData flags.
-   **Open in Entity fields** loads the entity's field list.
+1. Pick the F&O tab under *Environments*.
+2. Open **Entity names**, paste one or more names (any of the three kinds, one per line
+   or separated by commas) and click **Look up**.
+3. Each result shows the Power Automate name in large type with a **Copy** button, plus
+   all three names, the label and the OData flags. **Open in Entity fields** loads the
+   entity's field list.
 4. **Download names CSV** exports the table.
 
 ## How it matches
 
-1. Server-side `$filter` on `/metadata/DataEntities` for `Name`, `Name + "Entity"`, `PublicEntityName` or `PublicCollectionName` (exact, case-sensitive).
-2. If that misses: the full DataEntities list (cached per environment; tick *reload the entity list* after a deployment),
-   exact match ignoring case, also accepting the AOT name without its `Entity` suffix.
-3. If that misses: fuzzy ranking over all three names. It tolerates typos inside words (`Registration` / `Registeration`),
-   plural collection names, and word order. A clear winner at similarity ≥ 0.9 is shown as a **closest match (confirm)**;
-   otherwise the closest names are listed with a **Use** button.
+1. A server-side `$filter` on `/metadata/DataEntities` for `Name`, `Name + "Entity"`,
+   `PublicEntityName` or `PublicCollectionName` (exact and case-sensitive).
+2. If that misses, the full DataEntities list, cached per environment (tick *reload the
+   entity list* after a deployment). This match ignores case and also accepts the AOT
+   name without its `Entity` suffix.
+3. If that misses too, a fuzzy ranking over all three names. It tolerates typos inside
+   words (`Registration` / `Registeration`), plural collection names and word order. A
+   clear winner at similarity ≥ 0.9 is shown as a **closest match (confirm)**. Otherwise
+   the closest names are listed, each with a **Use** button.
 
 ## Live /data check (optional, on by default)
 
-One `GET /data/<collection>?$top=1&cross-company=true` per result — the same endpoint the connector calls. It reports whether
-the collection answers and how many fields a row has. It never displays record values. The read-only allowlist accepts
-exactly that URL shape and nothing else under `/data/` except `$metadata`, and the collection name always comes from
-DataEntities, never from what you typed.
+For each result the tool sends one `GET /data/<collection>?$top=1&cross-company=true`,
+the same endpoint the connector calls. It reports whether the collection answers and how
+many fields a row has, and it never shows record values. Under `/data/`, the read-only
+allowlist accepts that exact URL shape and `$metadata`, and nothing else. The collection
+name always comes from DataEntities, never from what you typed.
 
-A 404 there means OData is not serving the entity (DataServiceEnabled off, or the entity is not built/synced in that
-environment). If the check passes but the connector dropdown still does not list it, re-select the *Instance* in the action
-to refresh the connector's cached entity list, or type the collection name as a custom value.
+A 404 from this check means OData isn't serving the entity: either DataServiceEnabled is
+off, or the entity isn't built or synced in that environment. If the check passes but
+the connector dropdown still doesn't list the entity, re-select the *Instance* in the
+action to refresh the connector's cached entity list, or type the collection name as a
+custom value.
+
 ## License
 
 [MIT](LICENSE) © 2026 Mostafa Ali
